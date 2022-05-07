@@ -1,6 +1,6 @@
 import PyQt5.QtWidgets as qtw
 from PyQt5.QtCore import QSize, Qt, QThread, pyqtSignal
-from PyQt5.QtGui import QFont, QFontDatabase, QColor, QSyntaxHighlighter, QTextCharFormat, QIcon
+from PyQt5.QtGui import QFont, QFontDatabase, QColor, QSyntaxHighlighter, QTextCharFormat, QIcon, QKeySequence, QTextCursor
 import nltk
 import re
 import time
@@ -74,7 +74,9 @@ class WorkerThread(QThread):
 
         return result_dict
 
+# main application
 class MainWindow(qtw.QMainWindow):
+    # adding some extra properties the default constructor
     def __init__(self):
         super().__init__()
 
@@ -83,45 +85,71 @@ class MainWindow(qtw.QMainWindow):
         self.adjs = []
         self.adverbs = []
 
+        # some setup for the application window
         width, height = 1500, 1000
         self.setWindowTitle("Text Editor")
         self.setMinimumSize(width, height)
         pixmapi = qtw.QStyle.SP_DialogSaveButton
         icon = self.style().standardIcon(pixmapi)
-
         self.setWindowIcon(icon)
 
+        # adding keyboard shortcuts
+        self.shortcut_comment = qtw.QShortcut(QKeySequence('Ctrl+/'), self)
+        self.shortcut_comment.activated.connect(self.comment_shortcut)
+
+        # adding an instance of syntaxhighlighter and text input(assigned in define_conditions)
         self.highlighter = SyntaxHighlighter()
-        # self.text_input = qtw.QTextEdit(self, lineWrapMode=qtw.QTextEdit.FixedColumnWidth, lineWrapColumnOrWidth=100)
 
         self.define_conditions()
         self.setCentralWidget(self.text_input)
-        # self.set_pos_lists()
+
+        # setting some styling and starting worker thread background processes
         self.setStyleSheet("QTextEdit {background-color: rgb(0, 0, 0); color: white}")
 
         self.start_worker_thread()
 
+    def comment_shortcut(self):
+        # using cursor positions and inserting text, getting current cursor info
+        current_cursor = self.text_input.textCursor()
+        current_cursor_pos = current_cursor.position()
+        current_y = current_cursor.columnNumber()
+
+        # move backward to start of line with columnnumber
+        current_cursor.movePosition(QTextCursor.Left, QTextCursor.MoveAnchor, current_y)
+        # think have to reassign after each move of cursor?
+        self.text_input.setTextCursor(current_cursor)
+        self.text_input.insertPlainText('# ')
+        # and reset to original position plus 2 for hashtag and space
+        current_cursor.setPosition(current_cursor_pos + 2)
+        self.text_input.setTextCursor(current_cursor)
+        # TODO: should remove starting hashtag if one already there? currently will just add another one...
+
     def start_worker_thread(self):
-        # starting worker thread and triggering something when it finishes
+        # starting worker thread and triggering method when it finishes
         self.worker = WorkerThread(self.text_input.toPlainText())
         self.worker.start()
         self.worker.finished.connect(self.when_worker_finished)
+        # catching the returned signal from worker thread and passing to another method
         self.worker.return_value.connect(self.handle_pos_returned)
 
     def when_worker_finished(self):
-        # what to do when the worker thread is finished
-        # here trying to just run it again
+        # what to do when the worker thread is finished, here just run it again
         self.start_worker_thread()
 
+# reassigning values of part of speech lists after worker thread has processed text and returned them
     def handle_pos_returned(self, value):
         self.verbs = value.get("verbs")
         self.nouns = value.get("nouns")
         self.adjs = value.get("adjs")
         self.adverbs = value.get("adverbs")
 
+# defining formatting conditions for highlighting
+# mostly based on word being in part of speech tagged list with some regex based formatting
     def define_conditions(self):
+        # disconnecting highlighter from text input/document to refresh formatting conditions
         self.highlighter.setDocument(None)
 
+        # formatting for some major parts of speech
         verb_format = QTextCharFormat()
         verb_format.setForeground(Qt.green)
 
@@ -134,19 +162,22 @@ class MainWindow(qtw.QMainWindow):
         adverb_format = QTextCharFormat()
         adverb_format.setForeground(Qt.cyan)
 
+        # lambda function for cleaner evaluation in highlightblock method, call and check if true
         pos_info = [[lambda x: x in self.verbs, verb_format], [lambda x: x in self.nouns, noun_format],
         [lambda x: x in self.adjs, adj_format], [lambda x: x in self.adverbs, adverb_format]]
 
+        # adding to the highlighter instance
         for i, j in pos_info:
             self.highlighter.set_mapping(i, j)
 
-        # comments with hashtag for now
+        # comment formatting with hashtag for now
         comment_format = QTextCharFormat()
         cadet_blue = QColor('#5F9EA0')
         comment_format.setForeground(cadet_blue)
-
+        # regex for anything from hashtag till end of line
         self.highlighter.set_mapping(r'#.*$', comment_format)
 
+        # creating the textedit box and connecting the highlighter to that box
         self.text_input = qtw.QTextEdit(self, lineWrapMode=qtw.QTextEdit.FixedColumnWidth, lineWrapColumnOrWidth=100)
         self.highlighter.setDocument(self.text_input.document())
 

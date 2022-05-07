@@ -18,13 +18,13 @@ class SyntaxHighlighter(QSyntaxHighlighter):
     def highlightBlock(self, text_to_highlight):
         for condition, format in self._mapping.items():
             # find out if matches condition
-            matches = [i for i in text_to_highlight.split() if condition(i)==True]
-            # TODO:
-            # the start/end needs to be based on location in original split block rather than the match list XD
-            for c, match in enumerate(matches):
-                start = sum([len(i) for i in matches[:c+1]]) + c
-                end = start + len(match)
-                self.setFormat(start, end - start, format)
+            # matches = [i for i in text_to_highlight.split() if condition(i)==True]
+            split_words = text_to_highlight.split()
+            for c, word in enumerate(split_words):
+                if condition(word)==True:
+                    start = sum([len(i) for i in split_words[:c]]) + c
+                    end = start + len(word)
+                    self.setFormat(start, end - start, format)
 
 # worker thread for background process, using singal to pass info back to gui app
 # and adding a class property to pass from gui to thread

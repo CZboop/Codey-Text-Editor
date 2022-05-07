@@ -14,16 +14,22 @@ class SyntaxHighlighter(QSyntaxHighlighter):
     def set_mapping(self, condition, condition_format):
         self._mapping[condition] = condition_format
 
-# overriding main highlight function to use conditional logic
+# overriding main highlight function to be able to highlight based on conditional logic and also regex
     def highlightBlock(self, text_to_highlight):
         for condition, format in self._mapping.items():
-            # find out if matches condition
-            # matches = [i for i in text_to_highlight.split() if condition(i)==True]
-            split_words = text_to_highlight.split()
-            for c, word in enumerate(split_words):
-                if condition(word)==True:
-                    start = sum([len(i) for i in split_words[:c]]) + c
-                    end = start + len(word)
+            # different types of conditions, logical ones are functions so will be callable
+            if hasattr(condition, "__call__"):
+                # find out if matches condition
+                # matches = [i for i in text_to_highlight.split() if condition(i)==True]
+                split_words = text_to_highlight.split()
+                for c, word in enumerate(split_words):
+                    if condition(word)==True:
+                        start = sum([len(i) for i in split_words[:c]]) + c
+                        self.setFormat(start, len(word), format)
+            # regex condition otherwise
+            else:
+                for match in re.finditer(condition, text_to_highlight):
+                    start, end = match.span()
                     self.setFormat(start, end - start, format)
 
 # worker thread for background process, using singal to pass info back to gui app
@@ -134,15 +140,21 @@ class MainWindow(qtw.QMainWindow):
         for i, j in pos_info:
             self.highlighter.set_mapping(i, j)
 
+        # comments with hashtag for now
+        comment_format = QTextCharFormat()
+        cadet_blue = QColor('#5F9EA0')
+        comment_format.setForeground(cadet_blue)
+
+        self.highlighter.set_mapping(r'#.*$', comment_format)
+
         self.text_input = qtw.QTextEdit(self, lineWrapMode=qtw.QTextEdit.FixedColumnWidth, lineWrapColumnOrWidth=100)
         self.highlighter.setDocument(self.text_input.document())
 
-
-app = qtw.QApplication(sys.argv)
-
-window = MainWindow()
-window.show()
-
 # running app
 if __name__=="__main__":
+    app = qtw.QApplication(sys.argv)
+
+    window = MainWindow()
+    window.show()
+
     app.exec()

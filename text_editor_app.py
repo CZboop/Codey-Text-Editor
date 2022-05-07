@@ -1,12 +1,10 @@
 import PyQt5.QtWidgets as qtw
 from PyQt5.QtCore import QSize, Qt, QThread, pyqtSignal
-from PyQt5.QtGui import QFont, QFontDatabase, QColor, QSyntaxHighlighter, QTextCharFormat
+from PyQt5.QtGui import QFont, QFontDatabase, QColor, QSyntaxHighlighter, QTextCharFormat, QIcon
 import nltk
 import re
-
+import time
 import sys
-
-test_words = ['this', 'is', 'highlighted']
 
 class SyntaxHighlighter(QSyntaxHighlighter):
     def __init__(self, parent=None):
@@ -16,15 +14,20 @@ class SyntaxHighlighter(QSyntaxHighlighter):
     def set_mapping(self, condition, condition_format):
         self._mapping[condition] = condition_format
 
+# overriding main highlight function to use conditional logic
     def highlightBlock(self, text_to_highlight):
         for condition, format in self._mapping.items():
             # find out if matches condition
-            for match in re.finditer(condition, text_to_highlight):
-                start, end = match.span()
+            matches = [i for i in text_to_highlight.split() if condition(i)==True]
+            # TODO:
+            # the start/end needs to be based on location in original split block rather than the match list XD
+            for c, match in enumerate(matches):
+                start = sum([len(i) for i in matches[:c+1]]) + c
+                end = start + len(match)
                 self.setFormat(start, end - start, format)
 
-# issue is how to handle back and forth to and from the gui/ across threads
-# actually no problem can just pass and back and forth as class arg and signal
+# worker thread for background process, using singal to pass info back to gui app
+# and adding a class property to pass from gui to thread
 class WorkerThread(QThread):
     return_value = pyqtSignal(object)
     def __init__(self, text):
@@ -37,8 +40,8 @@ class WorkerThread(QThread):
         self.adverbs = []
 
     def run(self):
-        # print(self.text)
-        # need to use signal rather than just returning to pass back across threads
+        # method automatically runs when the gui starts the thread
+        # runs the other main method set_pos_lists and emits it back for the app to catch
         self.return_value.emit(self.set_pos_lists())
 
     def set_pos_lists(self):
@@ -60,16 +63,27 @@ class WorkerThread(QThread):
                     self.adjs.append(word)
                 else:
                     self.adverbs.append(word)
-        return {"verbs": self.verbs, "nouns": self.nouns, "adjs": self.adjs, "adverbs": self.adverbs}
 
+        result_dict = {"verbs": self.verbs, "nouns": self.nouns, "adjs": self.adjs, "adverbs": self.adverbs}
+
+        return result_dict
 
 class MainWindow(qtw.QMainWindow):
     def __init__(self):
         super().__init__()
 
+        self.verbs = []
+        self.nouns = []
+        self.adjs = []
+        self.adverbs = []
+
         width, height = 1500, 1000
         self.setWindowTitle("Text Editor")
         self.setMinimumSize(width, height)
+        pixmapi = qtw.QStyle.SP_DialogSaveButton
+        icon = self.style().standardIcon(pixmapi)
+
+        self.setWindowIcon(icon)
 
         self.highlighter = SyntaxHighlighter()
         # self.text_input = qtw.QTextEdit(self, lineWrapMode=qtw.QTextEdit.FixedColumnWidth, lineWrapColumnOrWidth=100)
@@ -94,23 +108,31 @@ class MainWindow(qtw.QMainWindow):
         self.start_worker_thread()
 
     def handle_pos_returned(self, value):
-        # print(value)
-        pass
-        # TODO: probably assign as properties of the mainwindow class then handle highlighting as below with word match regex initially
+        self.verbs = value.get("verbs")
+        self.nouns = value.get("nouns")
+        self.adjs = value.get("adjs")
+        self.adverbs = value.get("adverbs")
 
     def define_conditions(self):
-        word_format = QTextCharFormat()
-        word_format.setForeground(Qt.red)
-        # using regex for now, but just using it to check for a logical condition bit long?
-        pattern = "(?:[\s]|^)({})(?=[\s]|$)".format("|".join(test_words))
+        self.highlighter.setDocument(None)
 
-        self.highlighter.set_mapping(pattern, word_format)
+        verb_format = QTextCharFormat()
+        verb_format.setForeground(Qt.green)
 
-        # verb_format = QTextCharFormat()
-        # verb_format.setForeground(Qt.green)
-        # verb_pattern = "(?:[\s]|^)({})(?=[\s]|$)".format("|".join(self.verbs))
-        #
-        # self.highlighter.set_mapping(verb_pattern, verb_format)
+        noun_format = QTextCharFormat()
+        noun_format.setForeground(Qt.red)
+
+        adj_format = QTextCharFormat()
+        adj_format.setForeground(Qt.magenta)
+
+        adverb_format = QTextCharFormat()
+        adverb_format.setForeground(Qt.cyan)
+
+        pos_info = [[lambda x: x in self.verbs, verb_format], [lambda x: x in self.nouns, noun_format],
+        [lambda x: x in self.adjs, adj_format], [lambda x: x in self.adverbs, adverb_format]]
+
+        for i, j in pos_info:
+            self.highlighter.set_mapping(i, j)
 
         self.text_input = qtw.QTextEdit(self, lineWrapMode=qtw.QTextEdit.FixedColumnWidth, lineWrapColumnOrWidth=100)
         self.highlighter.setDocument(self.text_input.document())
@@ -121,5 +143,6 @@ app = qtw.QApplication(sys.argv)
 window = MainWindow()
 window.show()
 
+# running app
 if __name__=="__main__":
     app.exec()

@@ -78,9 +78,20 @@ class WorkerThread(QThread):
 class QTextEdit(qtw.QTextEdit):
     # overriding method in case of some events
     def keyPressEvent(self, event: QKeyEvent) -> None:
-        if event.type() == QEvent.KeyPress and event.key() == Qt.Key_ParenLeft:
+        # doubling up brackets and quotes automatically
+        if event.type() == QEvent.KeyPress and event.key() in [Qt.Key_ParenLeft, Qt.Key_QuoteDbl,
+        Qt.Key_Apostrophe, Qt.Key_BraceLeft, Qt.Key_BracketLeft]:
             cursor = self.textCursor()
-            self.insertPlainText("()")
+            if event.key() == Qt.Key_ParenLeft:
+                self.insertPlainText("()")
+            elif event.key() == Qt.Key_QuoteDbl:
+                self.insertPlainText("\"\"")
+            elif event.key() == Qt.Key_Apostrophe:
+                self.insertPlainText("\'\'")
+            elif event.key() == Qt.Key_BraceLeft:
+                self.insertPlainText("{}")
+            elif event.key() == Qt.Key_BracketLeft:
+                self.insertPlainText("[]")
             # moving cursor back one to be in between brackets
             cursor.movePosition(QTextCursor.Left, QTextCursor.MoveAnchor, 1)
             # reconnecting cursor to widget

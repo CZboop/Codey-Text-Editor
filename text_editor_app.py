@@ -119,6 +119,23 @@ class MainWindow(qtw.QMainWindow):
         icon = self.style().standardIcon(pixmapi)
         self.setWindowIcon(icon)
 
+        # setting up ribbon menu
+        file_menu = self.menuBar().addMenu('&File')
+        edit_menu = self.menuBar().addMenu('&Edit')
+        view_menu = self.menuBar().addMenu('&View')
+        help_menu = self.menuBar().addMenu('&Help')
+
+        # creating actions and connecting them to methods they will trigger
+        self.exit_action = qtw.QAction(self)
+        self.exit_action.setText('&Exit')
+        self.exit_action.triggered.connect(self.exit_method)
+        # adding actions to menus
+        file_menu.addAction(self.exit_action)
+
+        #setting up bottom status bar
+        statusbar = qtw.QStatusBar()
+        self.setStatusBar(statusbar)
+
         # adding keyboard shortcuts
         self.shortcut_comment = qtw.QShortcut(QKeySequence('Ctrl+/'), self)
         self.shortcut_comment.activated.connect(self.comment_shortcut)
@@ -133,6 +150,9 @@ class MainWindow(qtw.QMainWindow):
         self.setStyleSheet("QTextEdit {background-color: rgb(0, 0, 0); color: white}")
 
         self.start_worker_thread()
+
+    def exit_method(self):
+        qtw.qApp.quit()
 
     def comment_shortcut(self):
         # using cursor positions and inserting text, getting current cursor info

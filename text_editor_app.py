@@ -1,6 +1,6 @@
 import PyQt5.QtWidgets as qtw
-from PyQt5.QtCore import QSize, Qt, QThread, pyqtSignal
-from PyQt5.QtGui import QFont, QFontDatabase, QColor, QSyntaxHighlighter, QTextCharFormat, QIcon, QKeySequence, QTextCursor
+from PyQt5.QtCore import QSize, Qt, QThread, pyqtSignal, QEvent
+from PyQt5.QtGui import QFont, QFontDatabase, QColor, QSyntaxHighlighter, QTextCharFormat, QIcon, QKeySequence, QTextCursor, QKeyEvent
 import nltk
 import re
 import time
@@ -73,6 +73,21 @@ class WorkerThread(QThread):
         result_dict = {"verbs": self.verbs, "nouns": self.nouns, "adjs": self.adjs, "adverbs": self.adverbs}
 
         return result_dict
+
+# overriding text edit widget to have some text completion type features
+class QTextEdit(qtw.QTextEdit):
+    # overriding method in case of some events
+    def keyPressEvent(self, event: QKeyEvent) -> None:
+        if event.type() == QEvent.KeyPress and event.key() == Qt.Key_ParenLeft:
+            cursor = self.textCursor()
+            self.insertPlainText("()")
+            # moving cursor back one to be in between brackets
+            cursor.movePosition(QTextCursor.Left, QTextCursor.MoveAnchor, 1)
+            # reconnecting cursor to widget
+            self.setTextCursor(cursor)
+            return
+        # otherwise falling back to default super method of parent class
+        return super().keyPressEvent(event)
 
 # main application
 class MainWindow(qtw.QMainWindow):
@@ -178,7 +193,7 @@ class MainWindow(qtw.QMainWindow):
         self.highlighter.set_mapping(r'#.*$', comment_format)
 
         # creating the textedit box and connecting the highlighter to that box
-        self.text_input = qtw.QTextEdit(self, lineWrapMode=qtw.QTextEdit.FixedColumnWidth, lineWrapColumnOrWidth=100)
+        self.text_input = QTextEdit(self, lineWrapMode=qtw.QTextEdit.FixedColumnWidth, lineWrapColumnOrWidth=100)
         self.highlighter.setDocument(self.text_input.document())
 
 # running app

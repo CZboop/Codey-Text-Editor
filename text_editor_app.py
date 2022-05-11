@@ -140,10 +140,15 @@ class MainWindow(qtw.QMainWindow):
         self.save_as_action.setText('&Save As')
         self.save_as_action.triggered.connect(self.save_as_method)
 
+        self.load_action = qtw.QAction(self)
+        self.load_action.setText('&Open File')
+        self.load_action.triggered.connect(self.load_file_method)
+
         # adding actions to menus
         file_menu.addAction(self.exit_action)
         file_menu.addAction(self.save_action)
         file_menu.addAction(self.save_as_action)
+        file_menu.addAction(self.load_action)
 
         #setting up bottom status bar
         statusbar = qtw.QStatusBar()
@@ -180,8 +185,20 @@ class MainWindow(qtw.QMainWindow):
         self.filename = filename
         self.setWindowTitle('{} - Text Editor'.format(self.filename))
         text = self.text_input.toPlainText()
-        with open(self.filename + '.txt', 'w') as file:
+        with open(self.filename, 'w') as file:
             file.write(text)
+
+    def load_file_method(self):
+        # select file using QFileDialog
+        filename, _ = qtw.QFileDialog.getOpenFileName(self, 'Open File', '', 'Text Files (*.txt)')
+        # read contents using general read file
+        with open(filename, 'r') as file:
+            file_text = file.read()
+        # insert text into the text box
+        self.text_input.insertPlainText(file_text)
+        # set filename to name of opened file
+        self.filename = filename
+        self.setWindowTitle('{} - Text Editor'.format(self.filename))
 
     def comment_shortcut(self):
         # using cursor positions and inserting text, getting current cursor info

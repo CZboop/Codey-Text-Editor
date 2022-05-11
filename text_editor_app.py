@@ -129,8 +129,14 @@ class MainWindow(qtw.QMainWindow):
         self.exit_action = qtw.QAction(self)
         self.exit_action.setText('&Exit')
         self.exit_action.triggered.connect(self.exit_method)
+
+        self.save_action = qtw.QAction(self)
+        self.save_action.setText('&Save')
+        self.save_action.triggered.connect(self.save_method)
+
         # adding actions to menus
         file_menu.addAction(self.exit_action)
+        file_menu.addAction(self.save_action)
 
         #setting up bottom status bar
         statusbar = qtw.QStatusBar()
@@ -153,6 +159,12 @@ class MainWindow(qtw.QMainWindow):
 
     def exit_method(self):
         qtw.qApp.quit()
+
+    def save_method(self):
+        filename, _ = qtw.QFileDialog.getSaveFileName(None, 'Save file', 'C:\\', 'Text files (*.txt)')
+        text = self.text_input.toPlainText()
+        with open(filename + '.txt', 'w') as file:
+            file.write(text)
 
     def comment_shortcut(self):
         # using cursor positions and inserting text, getting current cursor info

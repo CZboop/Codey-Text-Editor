@@ -100,6 +100,33 @@ class QTextEdit(qtw.QTextEdit):
         # otherwise falling back to default super method of parent class
         return super().keyPressEvent(event)
 
+class CustomiseDialog(qtw.QDialog):
+    def __init__(self):
+        super().__init__()
+
+        self.font_size = None
+
+        self.setWindowTitle("Customisation Menu")
+
+        self.layout = qtw.QVBoxLayout()
+        self.font_size_label = qtw.QLabel("Font Size")
+        self.layout.addWidget(self.font_size_label)
+
+        self.font_size_box = qtw.QSpinBox()
+        self.font_size_box.setMinimum(8)
+        self.font_size_box.setMaximum(300)
+        self.layout.addWidget(self.font_size_box)
+
+        self.apply_button = qtw.QPushButton("Apply", self)
+        self.layout.addWidget(self.apply_button)
+        self.apply_button.clicked.connect(self.submitclose)
+
+        self.setLayout(self.layout)
+
+    def submitclose(self):
+        self.font_size = self.font_size_box.value()
+        self.accept()
+
 # main application
 class MainWindow(qtw.QMainWindow):
     # adding some extra properties the default constructor
@@ -149,12 +176,18 @@ class MainWindow(qtw.QMainWindow):
         self.new_file_action.setText('&New File')
         self.new_file_action.triggered.connect(self.new_file_method)
 
+        self.customise_action = qtw.QAction(self)
+        self.customise_action.setText('&Customise')
+        self.customise_action.triggered.connect(self.customise_menu_method)
+
         # adding actions to menu, in the order will appear in the menu
         file_menu.addAction(self.new_file_action)
         file_menu.addAction(self.load_action)
         file_menu.addAction(self.save_action)
         file_menu.addAction(self.save_as_action)
         file_menu.addAction(self.exit_action)
+
+        format_menu.addAction(self.customise_action)
 
         #setting up bottom status bar
         statusbar = qtw.QStatusBar()
@@ -250,6 +283,17 @@ class MainWindow(qtw.QMainWindow):
         self.define_conditions()
         self.setCentralWidget(self.text_input)
 
+    def customise_menu_method(self):
+        customise_menu = CustomiseDialog()
+        # customise_menu.exec()
+        if customise_menu.exec_():
+            self.update_font(customise_menu.font_size)
+
+    def update_font(self, font_size):
+        cursor = self.text_input.textCursor()
+        self.text_input.selectAll()
+        self.text_input.setFontPointSize(font_size)
+        self.text_input.setTextCursor(cursor)
 
     def comment_shortcut(self):
         # using cursor positions and inserting text, getting current cursor info

@@ -124,6 +124,7 @@ class MainWindow(qtw.QMainWindow):
         # setting up ribbon menu
         file_menu = self.menuBar().addMenu('&File')
         edit_menu = self.menuBar().addMenu('&Edit')
+        format_menu = self.menuBar().addMenu('&Format')
         view_menu = self.menuBar().addMenu('&View')
         help_menu = self.menuBar().addMenu('&Help')
 
@@ -144,11 +145,16 @@ class MainWindow(qtw.QMainWindow):
         self.load_action.setText('&Open File')
         self.load_action.triggered.connect(self.load_file_method)
 
-        # adding actions to menus
-        file_menu.addAction(self.exit_action)
+        self.new_file_action = qtw.QAction(self)
+        self.new_file_action.setText('&New File')
+        self.new_file_action.triggered.connect(self.new_file_method)
+
+        # adding actions to menu, in the order will appear in the menu
+        file_menu.addAction(self.new_file_action)
+        file_menu.addAction(self.load_action)
         file_menu.addAction(self.save_action)
         file_menu.addAction(self.save_as_action)
-        file_menu.addAction(self.load_action)
+        file_menu.addAction(self.exit_action)
 
         #setting up bottom status bar
         statusbar = qtw.QStatusBar()
@@ -183,10 +189,11 @@ class MainWindow(qtw.QMainWindow):
     def save_as_method(self):
         filename, _ = qtw.QFileDialog.getSaveFileName(self, 'Save file', '', 'Text files (*.txt)')
         self.filename = filename
-        self.setWindowTitle('{} - Text Editor'.format(self.filename))
-        text = self.text_input.toPlainText()
-        with open(self.filename, 'w') as file:
-            file.write(text)
+        if len(filename) > 0:
+            self.setWindowTitle('{} - Text Editor'.format(self.filename))
+            text = self.text_input.toPlainText()
+            with open(self.filename, 'w') as file:
+                file.write(text)
 
     def load_file_method(self):
         # select file using QFileDialog
@@ -199,6 +206,50 @@ class MainWindow(qtw.QMainWindow):
         # set filename to name of opened file
         self.filename = filename
         self.setWindowTitle('{} - Text Editor'.format(self.filename))
+
+    def new_file_method(self):
+        # checking if latest updates have been saved
+        if self.unsaved_changes():
+            # dialog to ask whether to save
+            want_to_save = qtw.QMessageBox.question(self, 'Save Changes', 'There are unsaved changes. Would you like to save?',
+            qtw.QMessageBox.Yes | qtw.QMessageBox.No)
+            if want_to_save == qtw.QMessageBox.Yes:
+                # save if has filename else save as (logic already in save method)
+                self.save_method()
+            # cancelling new file if neither button pressed
+            elif want_to_save != qtw.QMessageBox.No:
+                return
+        # make a new file by resetting everything including filename and text input contents
+        self.reset_properties()
+
+    def unsaved_changes(self):
+        # if it's still untitled can assume unsaved changes as long as it's not empty
+        current_text = self.text_input.toPlainText()
+        if self.filename == None:
+            if len(current_text) == 0:
+                return False
+            else:
+                return True
+        # otherwise check if the file at path is the same as the contents of text input
+        else:
+            with open(self.filename, 'r') as file:
+                saved_text = file.read()
+            if current_text == saved_text:
+                return False
+            else:
+                return True
+
+    def reset_properties(self):
+        self.verbs = []
+        self.nouns = []
+        self.adjs = []
+        self.adverbs = []
+
+        self.filename = None
+        self.setWindowTitle("Untitled - Text Editor")
+        self.define_conditions()
+        self.setCentralWidget(self.text_input)
+
 
     def comment_shortcut(self):
         # using cursor positions and inserting text, getting current cursor info

@@ -20,7 +20,6 @@ class SyntaxHighlighter(QSyntaxHighlighter):
             # different types of conditions, logical ones are functions so will be callable
             if hasattr(condition, "__call__"):
                 # find out if matches condition
-                # matches = [i for i in text_to_highlight.split() if condition(i)==True]
                 split_words = text_to_highlight.split()
                 for c, word in enumerate(split_words):
                     if condition(word)==True:
@@ -106,6 +105,11 @@ class CustomiseDialog(qtw.QDialog):
 
         self.font_size = None
 
+        self.verb_colour = None
+        self.noun_colour = None
+        self.adverb_colour = None
+        self.adj_colour = None
+
         self.setWindowTitle("Customisation Menu")
 
         self.setWindowTitle("Customisation Menu")
@@ -121,15 +125,50 @@ class CustomiseDialog(qtw.QDialog):
         self.font_size_box.setMaximum(300)
         self.layout.addWidget(self.font_size_box)
 
+        # customising mart of speech highlight colours
+        self.verb_dialog_button = qtw.QPushButton("Choose Verb Colour", self)
+        self.layout.addWidget(self.verb_dialog_button)
+        self.verb_dialog_button.clicked.connect(self.verb_colour_picker)
+
+        self.noun_dialog_button = qtw.QPushButton("Choose Noun Colour", self)
+        self.layout.addWidget(self.noun_dialog_button)
+        self.noun_dialog_button.clicked.connect(self.noun_colour_picker)
+
+        self.adverb_dialog_button = qtw.QPushButton("Choose Adverb Colour", self)
+        self.layout.addWidget(self.adverb_dialog_button)
+        self.adverb_dialog_button.clicked.connect(self.adverb_colour_picker)
+
+        self.adj_dialog_button = qtw.QPushButton("Choose Adjective Colour", self)
+        self.layout.addWidget(self.adj_dialog_button)
+        self.adj_dialog_button.clicked.connect(self.adj_colour_picker)
+
+        # button called apply changes but this will return class with set properties to be then applied from the main app window
         self.apply_button = qtw.QPushButton("Apply", self)
         self.layout.addWidget(self.apply_button)
         self.apply_button.clicked.connect(self.submitclose)
 
         self.setLayout(self.layout)
 
+    # function returns values of dialog and closes it
     def submitclose(self):
         self.font_size = self.font_size_box.value()
         self.accept()
+
+    def verb_colour_picker(self):
+        verb_colour_picker = qtw.QColorDialog().getColor()
+        self.verb_colour = verb_colour_picker
+
+    def noun_colour_picker(self):
+        noun_colour_picker = qtw.QColorDialog().getColor()
+        self.noun_colour = noun_colour_picker
+
+    def adverb_colour_picker(self):
+        adverb_colour_picker = qtw.QColorDialog().getColor()
+        self.adverb_colour = adverb_colour_picker
+
+    def adj_colour_picker(self):
+        adj_colour_picker = qtw.QColorDialog().getColor()
+        self.adj_colour = adj_colour_picker
 
 # main application
 class MainWindow(qtw.QMainWindow):
@@ -141,6 +180,11 @@ class MainWindow(qtw.QMainWindow):
         self.nouns = []
         self.adjs = []
         self.adverbs = []
+
+        self.verb_colour = QColor("#7bb4c0")
+        self.noun_colour = QColor("#f1c96e")
+        self.adj_colour = QColor("#b77fd7")
+        self.adverb_colour = QColor("#c97477")
 
         self.filename = None
 
@@ -292,6 +336,7 @@ class MainWindow(qtw.QMainWindow):
         # customise_menu.exec()
         if customise_menu.exec_():
             self.update_font(customise_menu.font_size)
+            self.update_highlight_colours(customise_menu.verb_colour, customise_menu.noun_colour, customise_menu.adverb_colour, customise_menu.adj_colour)
 
     def update_font(self, font_size):
         # setting existing font to be the size given
@@ -302,6 +347,17 @@ class MainWindow(qtw.QMainWindow):
         # setting this as size going forward, keeping current font family
         new_font = QFont(self.text_input.font().family(), font_size)
         self.text_input.setFont(new_font)
+
+    def update_highlight_colours(self, verb_colour, noun_colour, adverb_colour, adj_colour):
+        if verb_colour:
+            self.verb_colour = verb_colour
+        if noun_colour:
+            self.noun_colour = noun_colour
+        if adverb_colour:
+            self.adverb_colour = adverb_colour
+        if adj_colour:
+            self.adj_colour = adj_colour
+        # TODO: apply these colours to the highlighter
 
     def comment_shortcut(self):
         # using cursor positions and inserting text, getting current cursor info
@@ -346,16 +402,16 @@ class MainWindow(qtw.QMainWindow):
 
         # formatting for some major parts of speech
         verb_format = QTextCharFormat()
-        verb_format.setForeground(Qt.green)
+        verb_format.setForeground(self.verb_colour)
 
         noun_format = QTextCharFormat()
-        noun_format.setForeground(Qt.red)
+        noun_format.setForeground(self.noun_colour)
 
         adj_format = QTextCharFormat()
-        adj_format.setForeground(Qt.magenta)
+        adj_format.setForeground(self.adj_colour)
 
         adverb_format = QTextCharFormat()
-        adverb_format.setForeground(Qt.cyan)
+        adverb_format.setForeground(self.adverb_colour)
 
         # lambda function for cleaner evaluation in highlightblock method, call and check if true
         pos_info = [[lambda x: x in self.verbs, verb_format], [lambda x: x in self.nouns, noun_format],

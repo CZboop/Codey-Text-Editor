@@ -111,9 +111,11 @@ class MainWindow(qtw.QMainWindow):
         self.adjs = []
         self.adverbs = []
 
+        self.filename = None
+
         # some setup for the application window
         width, height = 1500, 1000
-        self.setWindowTitle("Text Editor")
+        self.setWindowTitle("Untitled - Text Editor")
         self.setMinimumSize(width, height)
         pixmapi = qtw.QStyle.SP_DialogSaveButton
         icon = self.style().standardIcon(pixmapi)
@@ -134,9 +136,14 @@ class MainWindow(qtw.QMainWindow):
         self.save_action.setText('&Save')
         self.save_action.triggered.connect(self.save_method)
 
+        self.save_as_action = qtw.QAction(self)
+        self.save_as_action.setText('&Save As')
+        self.save_as_action.triggered.connect(self.save_as_method)
+
         # adding actions to menus
         file_menu.addAction(self.exit_action)
         file_menu.addAction(self.save_action)
+        file_menu.addAction(self.save_as_action)
 
         #setting up bottom status bar
         statusbar = qtw.QStatusBar()
@@ -161,9 +168,19 @@ class MainWindow(qtw.QMainWindow):
         qtw.qApp.quit()
 
     def save_method(self):
-        filename, _ = qtw.QFileDialog.getSaveFileName(None, 'Save file', 'C:\\', 'Text files (*.txt)')
+        if not self.filename:
+            self.save_as_method()
+        else:
+            text = self.text_input.toPlainText()
+            with open(self.filename + '.txt', 'w') as file:
+                file.write(text)
+
+    def save_as_method(self):
+        filename, _ = qtw.QFileDialog.getSaveFileName(self, 'Save file', '', 'Text files (*.txt)')
+        self.filename = filename
+        self.setWindowTitle('{} - Text Editor'.format(self.filename))
         text = self.text_input.toPlainText()
-        with open(filename + '.txt', 'w') as file:
+        with open(self.filename + '.txt', 'w') as file:
             file.write(text)
 
     def comment_shortcut(self):

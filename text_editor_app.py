@@ -108,6 +108,10 @@ class CustomiseDialog(qtw.QDialog):
 
         self.setWindowTitle("Customisation Menu")
 
+        self.setWindowTitle("Customisation Menu")
+        width, height = 750, 400
+        self.setMinimumSize(width, height)
+
         self.layout = qtw.QVBoxLayout()
         self.font_size_label = qtw.QLabel("Font Size")
         self.layout.addWidget(self.font_size_label)
@@ -290,10 +294,14 @@ class MainWindow(qtw.QMainWindow):
             self.update_font(customise_menu.font_size)
 
     def update_font(self, font_size):
+        # setting existing font to be the size given
         cursor = self.text_input.textCursor()
         self.text_input.selectAll()
         self.text_input.setFontPointSize(font_size)
         self.text_input.setTextCursor(cursor)
+        # setting this as size going forward, keeping current font family
+        new_font = QFont(self.text_input.font().family(), font_size)
+        self.text_input.setFont(new_font)
 
     def comment_shortcut(self):
         # using cursor positions and inserting text, getting current cursor info

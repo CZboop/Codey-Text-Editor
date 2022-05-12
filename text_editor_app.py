@@ -31,6 +31,9 @@ class SyntaxHighlighter(QSyntaxHighlighter):
                     start, end = match.span()
                     self.setFormat(start, end - start, format)
 
+    def clear_mappings(self):
+        self._mapping = {}
+
 # worker thread for background process, using singal to pass info back to gui app
 # and adding a class property to pass from gui to thread
 class WorkerThread(QThread):
@@ -79,14 +82,12 @@ class QTextEdit(qtw.QTextEdit):
     def keyPressEvent(self, event: QKeyEvent) -> None:
         # doubling up brackets and quotes automatically
         if event.type() == QEvent.KeyPress and event.key() in [Qt.Key_ParenLeft, Qt.Key_QuoteDbl,
-        Qt.Key_Apostrophe, Qt.Key_BraceLeft, Qt.Key_BracketLeft]:
+        Qt.Key_BraceLeft, Qt.Key_BracketLeft]:
             cursor = self.textCursor()
             if event.key() == Qt.Key_ParenLeft:
                 self.insertPlainText("()")
             elif event.key() == Qt.Key_QuoteDbl:
                 self.insertPlainText("\"\"")
-            elif event.key() == Qt.Key_Apostrophe:
-                self.insertPlainText("\'\'")
             elif event.key() == Qt.Key_BraceLeft:
                 self.insertPlainText("{}")
             elif event.key() == Qt.Key_BracketLeft:
@@ -109,6 +110,7 @@ class CustomiseDialog(qtw.QDialog):
         self.noun_colour = None
         self.adverb_colour = None
         self.adj_colour = None
+        self.comment_colour = None
 
         self.setWindowTitle("Customisation Menu")
 
@@ -125,7 +127,7 @@ class CustomiseDialog(qtw.QDialog):
         self.font_size_box.setMaximum(300)
         self.layout.addWidget(self.font_size_box)
 
-        # customising mart of speech highlight colours
+        # customising colours for different types of words and comments
         self.verb_dialog_button = qtw.QPushButton("Choose Verb Colour", self)
         self.layout.addWidget(self.verb_dialog_button)
         self.verb_dialog_button.clicked.connect(self.verb_colour_picker)
@@ -142,33 +144,43 @@ class CustomiseDialog(qtw.QDialog):
         self.layout.addWidget(self.adj_dialog_button)
         self.adj_dialog_button.clicked.connect(self.adj_colour_picker)
 
-        # button called apply changes but this will return class with set properties to be then applied from the main app window
+        self.comment_dialog_button = qtw.QPushButton("Choose Comment Colour", self)
+        self.layout.addWidget(self.comment_dialog_button)
+        self.comment_dialog_button.clicked.connect(self.comment_colour_picker)
+
+        # returns the class with current properties to be applied by main app 
         self.apply_button = qtw.QPushButton("Apply", self)
         self.layout.addWidget(self.apply_button)
         self.apply_button.clicked.connect(self.submitclose)
 
         self.setLayout(self.layout)
 
-    # function returns values of dialog and closes it
     def submitclose(self):
-        self.font_size = self.font_size_box.value()
+        self.set_font_size()
         self.accept()
+
+    def set_font_size(self):
+        self.font_size = self.font_size_box.value()
 
     def verb_colour_picker(self):
         verb_colour_picker = qtw.QColorDialog().getColor()
-        self.verb_colour = verb_colour_picker
+        self.verb_colour = QColor(verb_colour_picker)
 
     def noun_colour_picker(self):
         noun_colour_picker = qtw.QColorDialog().getColor()
-        self.noun_colour = noun_colour_picker
+        self.noun_colour = QColor(noun_colour_picker)
 
     def adverb_colour_picker(self):
         adverb_colour_picker = qtw.QColorDialog().getColor()
-        self.adverb_colour = adverb_colour_picker
+        self.adverb_colour = QColor(adverb_colour_picker)
 
     def adj_colour_picker(self):
         adj_colour_picker = qtw.QColorDialog().getColor()
-        self.adj_colour = adj_colour_picker
+        self.adj_colour = QColor(adj_colour_picker)
+
+    def comment_colour_picker(self):
+        comment_colour_picker = qtw.QColorDialog().getColor()
+        self.comment_colour = QColor(comment_colour_picker)
 
 # main application
 class MainWindow(qtw.QMainWindow):
@@ -185,6 +197,7 @@ class MainWindow(qtw.QMainWindow):
         self.noun_colour = QColor("#f1c96e")
         self.adj_colour = QColor("#b77fd7")
         self.adverb_colour = QColor("#c97477")
+        self.comment_colour = QColor("#5F9EA0")
 
         self.filename = None
 
@@ -248,7 +261,7 @@ class MainWindow(qtw.QMainWindow):
         # adding an instance of syntaxhighlighter and text input(assigned in define_conditions)
         self.highlighter = SyntaxHighlighter()
 
-        self.define_conditions()
+        self.setup_highlighter()
         self.setCentralWidget(self.text_input)
 
         # setting some styling and starting worker thread background processes
@@ -328,7 +341,7 @@ class MainWindow(qtw.QMainWindow):
 
         self.filename = None
         self.setWindowTitle("Untitled - Text Editor")
-        self.define_conditions()
+        self.setup_highlighter()
         self.setCentralWidget(self.text_input)
 
     def customise_menu_method(self):
@@ -336,7 +349,7 @@ class MainWindow(qtw.QMainWindow):
         # customise_menu.exec()
         if customise_menu.exec_():
             self.update_font(customise_menu.font_size)
-            self.update_highlight_colours(customise_menu.verb_colour, customise_menu.noun_colour, customise_menu.adverb_colour, customise_menu.adj_colour)
+            self.update_highlight_colours(customise_menu.verb_colour, customise_menu.noun_colour, customise_menu.adverb_colour, customise_menu.adj_colour, customise_menu.comment_colour)
 
     def update_font(self, font_size):
         # setting existing font to be the size given
@@ -348,7 +361,7 @@ class MainWindow(qtw.QMainWindow):
         new_font = QFont(self.text_input.font().family(), font_size)
         self.text_input.setFont(new_font)
 
-    def update_highlight_colours(self, verb_colour, noun_colour, adverb_colour, adj_colour):
+    def update_highlight_colours(self, verb_colour, noun_colour, adverb_colour, adj_colour, comment_colour):
         if verb_colour:
             self.verb_colour = verb_colour
         if noun_colour:
@@ -357,7 +370,11 @@ class MainWindow(qtw.QMainWindow):
             self.adverb_colour = adverb_colour
         if adj_colour:
             self.adj_colour = adj_colour
-        # TODO: apply these colours to the highlighter
+        if comment_colour:
+            self.comment_colour = comment_colour
+        # applying these changes to the conditions of the text highlighter
+        self.highlighter.clear_mappings()
+        self.define_conditions()
 
     def comment_shortcut(self):
         # using cursor positions and inserting text, getting current cursor info
@@ -396,10 +413,17 @@ class MainWindow(qtw.QMainWindow):
 
 # defining formatting conditions for highlighting
 # mostly based on word being in part of speech tagged list with some regex based formatting
-    def define_conditions(self):
+    def setup_highlighter(self):
         # disconnecting highlighter from text input/document to refresh formatting conditions
         self.highlighter.setDocument(None)
 
+        self.define_conditions()
+
+        # creating the textedit box and connecting the highlighter to that box
+        self.text_input = QTextEdit(self, lineWrapMode=qtw.QTextEdit.FixedColumnWidth, lineWrapColumnOrWidth=100)
+        self.highlighter.setDocument(self.text_input.document())
+
+    def define_conditions(self):
         # formatting for some major parts of speech
         verb_format = QTextCharFormat()
         verb_format.setForeground(self.verb_colour)
@@ -423,14 +447,9 @@ class MainWindow(qtw.QMainWindow):
 
         # comment formatting with hashtag for now
         comment_format = QTextCharFormat()
-        cadet_blue = QColor('#5F9EA0')
-        comment_format.setForeground(cadet_blue)
+        comment_format.setForeground(self.comment_colour)
         # regex for anything from hashtag till end of line
         self.highlighter.set_mapping(r'#.*$', comment_format)
-
-        # creating the textedit box and connecting the highlighter to that box
-        self.text_input = QTextEdit(self, lineWrapMode=qtw.QTextEdit.FixedColumnWidth, lineWrapColumnOrWidth=100)
-        self.highlighter.setDocument(self.text_input.document())
 
 # running app
 if __name__=="__main__":

@@ -105,6 +105,7 @@ class CustomiseDialog(qtw.QDialog):
         super().__init__()
 
         self.font_size = None
+        self.font_family = None
 
         self.verb_colour = None
         self.noun_colour = None
@@ -113,10 +114,12 @@ class CustomiseDialog(qtw.QDialog):
         self.comment_colour = None
 
         self.setWindowTitle("Customisation Menu")
-
-        self.setWindowTitle("Customisation Menu")
         width, height = 750, 400
         self.setMinimumSize(width, height)
+
+        pixmapi = qtw.QStyle.SP_DialogSaveButton
+        icon = self.style().standardIcon(pixmapi)
+        self.setWindowIcon(icon)
 
         self.layout = qtw.QVBoxLayout()
         self.font_size_label = qtw.QLabel("Font Size")
@@ -127,7 +130,19 @@ class CustomiseDialog(qtw.QDialog):
         self.font_size_box.setMaximum(300)
         self.layout.addWidget(self.font_size_box)
 
-        # customising colours for different types of words and comments
+        # font family picker
+        self.font_family_label = qtw.QLabel("Font")
+        self.layout.addWidget(self.font_family_label)
+        self.font_dropdown = qtw.QComboBox(self)
+        font_list = ["Consolas", "Calibri", "Courier", "Helvetica", "Times", ]
+        for font in font_list:
+            self.font_dropdown.addItem(font)
+        self.layout.addWidget(self.font_dropdown)
+
+        self.highlight_colour_label = qtw.QLabel("Highlight Colours")
+        self.layout.addWidget(self.highlight_colour_label)
+
+        # customising highlight and comment colours
         self.verb_dialog_button = qtw.QPushButton("Choose Verb Colour", self)
         self.layout.addWidget(self.verb_dialog_button)
         self.verb_dialog_button.clicked.connect(self.verb_colour_picker)
@@ -148,7 +163,10 @@ class CustomiseDialog(qtw.QDialog):
         self.layout.addWidget(self.comment_dialog_button)
         self.comment_dialog_button.clicked.connect(self.comment_colour_picker)
 
-        # returns the class with current properties to be applied by main app 
+        self.apply_label = qtw.QLabel("Apply Changes")
+        self.layout.addWidget(self.apply_label)
+
+        #spply button to set everything ready to be returned and used by main application 
         self.apply_button = qtw.QPushButton("Apply", self)
         self.layout.addWidget(self.apply_button)
         self.apply_button.clicked.connect(self.submitclose)
@@ -157,10 +175,14 @@ class CustomiseDialog(qtw.QDialog):
 
     def submitclose(self):
         self.set_font_size()
+        self.set_font_family()
         self.accept()
 
     def set_font_size(self):
         self.font_size = self.font_size_box.value()
+
+    def set_font_family(self):
+        self.font_family = str(self.font_dropdown.currentText())
 
     def verb_colour_picker(self):
         verb_colour_picker = qtw.QColorDialog().getColor()
@@ -193,13 +215,16 @@ class MainWindow(qtw.QMainWindow):
         self.adjs = []
         self.adverbs = []
 
-        self.verb_colour = QColor("#7bb4c0")
+        self.verb_colour = QColor("#b5ea78")
         self.noun_colour = QColor("#f1c96e")
         self.adj_colour = QColor("#b77fd7")
         self.adverb_colour = QColor("#c97477")
         self.comment_colour = QColor("#5F9EA0")
 
         self.filename = None
+
+        self.font_family = "Consolas"
+        self.font_size = 10
 
         # some setup for the application window
         width, height = 1500, 1000
@@ -348,17 +373,19 @@ class MainWindow(qtw.QMainWindow):
         customise_menu = CustomiseDialog()
         # customise_menu.exec()
         if customise_menu.exec_():
-            self.update_font(customise_menu.font_size)
+            self.update_font(customise_menu.font_size, customise_menu.font_family)
             self.update_highlight_colours(customise_menu.verb_colour, customise_menu.noun_colour, customise_menu.adverb_colour, customise_menu.adj_colour, customise_menu.comment_colour)
 
-    def update_font(self, font_size):
+    def update_font(self, font_size, font_family):
+        self.font_size = font_size
+        self.font_family = font_family
         # setting existing font to be the size given
         cursor = self.text_input.textCursor()
         self.text_input.selectAll()
-        self.text_input.setFontPointSize(font_size)
+        self.text_input.setFontPointSize(self.font_size)
         self.text_input.setTextCursor(cursor)
         # setting this as size going forward, keeping current font family
-        new_font = QFont(self.text_input.font().family(), font_size)
+        new_font = QFont(self.font_family, self.font_size)
         self.text_input.setFont(new_font)
 
     def update_highlight_colours(self, verb_colour, noun_colour, adverb_colour, adj_colour, comment_colour):
@@ -421,6 +448,7 @@ class MainWindow(qtw.QMainWindow):
 
         # creating the textedit box and connecting the highlighter to that box
         self.text_input = QTextEdit(self, lineWrapMode=qtw.QTextEdit.FixedColumnWidth, lineWrapColumnOrWidth=100)
+        self.text_input.setFont(QFont(self.font_family, self.font_size))
         self.highlighter.setDocument(self.text_input.document())
 
     def define_conditions(self):

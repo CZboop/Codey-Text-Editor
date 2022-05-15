@@ -76,6 +76,19 @@ class WorkerThread(QThread):
 
         return result_dict
 
+class StatusThread(QThread):
+    cursor_value = pyqtSignal(list)
+    def __init__(self, cursor_info):
+        super(StatusThread, self).__init__()
+        self.cursor_info = cursor_info
+
+    def run(self):
+        # print(self.cursor_info)
+        self.cursor_value.emit(self.return_cursor_info())
+
+    def return_cursor_info(self):
+        return self.cursor_info
+
 # overriding text edit widget to have some text completion type features
 class QTextEdit(qtw.QTextEdit):
     # overriding method in case of some events
@@ -101,11 +114,12 @@ class QTextEdit(qtw.QTextEdit):
         return super().keyPressEvent(event)
 
 class CustomiseDialog(qtw.QDialog):
-    def __init__(self):
+    def __init__(self, mode):
         super().__init__()
 
         self.font_size = None
         self.font_family = None
+        self.mode = mode
 
         self.verb_colour = None
         self.noun_colour = None
@@ -142,7 +156,7 @@ class CustomiseDialog(qtw.QDialog):
         self.highlight_colour_label = qtw.QLabel("Highlight Colours")
         self.layout.addWidget(self.highlight_colour_label)
 
-        # customising highlight and comment colours
+        # customising colours
         self.verb_dialog_button = qtw.QPushButton("Choose Verb Colour", self)
         self.layout.addWidget(self.verb_dialog_button)
         self.verb_dialog_button.clicked.connect(self.verb_colour_picker)
@@ -163,10 +177,17 @@ class CustomiseDialog(qtw.QDialog):
         self.layout.addWidget(self.comment_dialog_button)
         self.comment_dialog_button.clicked.connect(self.comment_colour_picker)
 
+        # toggle light/ dark mode
+        self.button_text = "Switch to Dark Mode" if self.mode == "light" else "Switch to Light Mode"
+        self.toggle_button = qtw.QPushButton(self.button_text, self)
+        self.toggle_button.setCheckable(True)
+        self.toggle_button.clicked.connect(self.switch_mode)
+        self.layout.addWidget(self.toggle_button)
+
         self.apply_label = qtw.QLabel("Apply Changes")
         self.layout.addWidget(self.apply_label)
 
-        #spply button to set everything ready to be returned and used by main application 
+        #---- button called apply changes but this will return class with set properties to be then applied from the main app window
         self.apply_button = qtw.QPushButton("Apply", self)
         self.layout.addWidget(self.apply_button)
         self.apply_button.clicked.connect(self.submitclose)
@@ -204,11 +225,19 @@ class CustomiseDialog(qtw.QDialog):
         comment_colour_picker = qtw.QColorDialog().getColor()
         self.comment_colour = QColor(comment_colour_picker)
 
+    def switch_mode(self):
+        self.button_text = "Switch to Dark Mode" if self.mode == "light" else "Switch to Light Mode"
+        self.mode = "light" if self.mode == "dark" else "dark"
+        self.update()
+        self.show()
+
 # main application
 class MainWindow(qtw.QMainWindow):
     # adding some extra properties the default constructor
     def __init__(self):
         super().__init__()
+
+        self.mode = "dark"
 
         self.verbs = []
         self.nouns = []
@@ -276,8 +305,8 @@ class MainWindow(qtw.QMainWindow):
         format_menu.addAction(self.customise_action)
 
         #setting up bottom status bar
-        statusbar = qtw.QStatusBar()
-        self.setStatusBar(statusbar)
+        self.statusbar = qtw.QStatusBar()
+        self.setStatusBar(self.statusbar)
 
         # adding keyboard shortcuts
         self.shortcut_comment = qtw.QShortcut(QKeySequence('Ctrl+/'), self)
@@ -289,10 +318,19 @@ class MainWindow(qtw.QMainWindow):
         self.setup_highlighter()
         self.setCentralWidget(self.text_input)
 
+        self.line_column_label = f"Line {self.get_cursor_loc()[0]}, Column {self.get_cursor_loc()[1]}"
+        self.statusbar.showMessage(self.line_column_label)
+        self.start_status_thread()
+
         # setting some styling and starting worker thread background processes
-        self.setStyleSheet("QTextEdit {background-color: rgb(0, 0, 0); color: white}")
+        self.setStyleSheet("QTextEdit {background-color: rgb(30, 30, 30); color: white}")
 
         self.start_worker_thread()
+
+    def get_cursor_loc(self):
+        cursor = self.text_input.textCursor()
+        # print(cursor.columnNumber())
+        return [cursor.blockNumber() + 1, cursor.columnNumber() + 1]
 
     def exit_method(self):
         qtw.qApp.quit()
@@ -370,11 +408,19 @@ class MainWindow(qtw.QMainWindow):
         self.setCentralWidget(self.text_input)
 
     def customise_menu_method(self):
-        customise_menu = CustomiseDialog()
+        customise_menu = CustomiseDialog(self.mode)
         # customise_menu.exec()
         if customise_menu.exec_():
             self.update_font(customise_menu.font_size, customise_menu.font_family)
             self.update_highlight_colours(customise_menu.verb_colour, customise_menu.noun_colour, customise_menu.adverb_colour, customise_menu.adj_colour, customise_menu.comment_colour)
+            self.update_mode(customise_menu.mode)
+
+    def update_mode(self, mode):
+        self.mode = mode
+        if mode == "light":
+            self.setStyleSheet("QTextEdit {background-color: rgb(255, 255, 255); color: black}")
+        else:
+            self.setStyleSheet("QTextEdit {background-color: rgb(30, 30, 30); color: white}")
 
     def update_font(self, font_size, font_family):
         self.font_size = font_size
@@ -437,6 +483,19 @@ class MainWindow(qtw.QMainWindow):
         self.nouns = value.get("nouns")
         self.adjs = value.get("adjs")
         self.adverbs = value.get("adverbs")
+
+    def start_status_thread(self):
+        self.status = StatusThread(self.get_cursor_loc())
+        self.status.start()
+        self.status.finished.connect(self.when_status_finished)
+        self.status.cursor_value.connect(self.update_status)
+
+    def when_status_finished(self):
+        self.status.start()
+
+    def update_status(self, info):
+        self.line_column_label = f"Line {info[0]}, Column {info[1]}"
+        self.statusbar.showMessage(self.line_column_label)
 
 # defining formatting conditions for highlighting
 # mostly based on word being in part of speech tagged list with some regex based formatting

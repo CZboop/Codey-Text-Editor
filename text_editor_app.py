@@ -316,7 +316,15 @@ class MainWindow(qtw.QMainWindow):
         self.italic_action.setText('&Italic')
         self.italic_action.triggered.connect(self.italic_method)
         self.italic_action.setCheckable(True)
-        self.italic_action.setChecked(False)       
+        self.italic_action.setChecked(False)
+
+        self.plus_font_action = qtw.QAction(self)
+        self.plus_font_action.setText('&Increase Font')
+        self.plus_font_action.triggered.connect(self.plus_font_method)
+
+        self.minus_font_action = qtw.QAction(self)
+        self.minus_font_action.setText('&Decrease Font')
+        self.minus_font_action.triggered.connect(self.minus_font_method)
 
         # adding actions to menu, in the order will appear in the menu
         file_menu.addAction(self.new_file_action)
@@ -331,6 +339,9 @@ class MainWindow(qtw.QMainWindow):
         edit_menu.addAction(self.bold_action)
         edit_menu.addAction(self.italic_action)
 
+        view_menu.addAction(self.plus_font_action)
+        view_menu.addAction(self.minus_font_action)
+
         #setting up bottom status bar
         self.statusbar = qtw.QStatusBar()
         self.setStatusBar(self.statusbar)
@@ -344,6 +355,12 @@ class MainWindow(qtw.QMainWindow):
 
         self.shortcut_italic = qtw.QShortcut(QKeySequence('Ctrl+i'), self)
         self.shortcut_italic.activated.connect(self.italic_method)
+
+        self.shortcut_plus = qtw.QShortcut(QKeySequence('Ctrl+='), self)
+        self.shortcut_plus.activated.connect(self.plus_font_method)
+
+        self.shortcut_minus = qtw.QShortcut(QKeySequence('Ctrl+-'), self)
+        self.shortcut_minus.activated.connect(self.minus_font_method)
 
         # adding an instance of syntaxhighlighter and text input(assigned in define_conditions)
         self.highlighter = SyntaxHighlighter()
@@ -364,6 +381,14 @@ class MainWindow(qtw.QMainWindow):
         cursor = self.text_input.textCursor()
         # print(cursor.columnNumber())
         return [cursor.blockNumber() + 1, cursor.columnNumber() + 1]
+
+    def plus_font_method(self):
+        self.font_size += 2
+        self.text_input.setFontPointSize(self.font_size)
+
+    def minus_font_method(self):
+        self.font_size -= 2
+        self.text_input.setFontPointSize(self.font_size)
 
     def bold_method(self):
         # checking enum for bold else setting to normal

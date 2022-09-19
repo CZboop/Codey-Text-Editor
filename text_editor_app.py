@@ -23,8 +23,12 @@ class SyntaxHighlighter(QSyntaxHighlighter):
                 split_words = text_to_highlight.split()
                 for c, word in enumerate(split_words):
                     if condition(word)==True:
-                        start = sum([len(i) for i in split_words[:c]]) + c
-                        self.setFormat(start, len(word), format)
+                        # finding the start index of word that matches condition using regex
+                        iterator = re.finditer(f"\\b{word}\\b", text_to_highlight)
+                        for match in iterator:
+                            # then highlighting using method of parent class qsyntaxhighlighter, not defined here
+                            self.setFormat(match.start(), len(word), format)
+
             # regex condition otherwise
             else:
                 for match in re.finditer(condition, text_to_highlight):
@@ -83,7 +87,7 @@ class StatusThread(QThread):
         self.cursor_info = cursor_info
 
     def run(self):
-        # print(self.cursor_info)
+        print("running")
         self.cursor_value.emit(self.return_cursor_info())
 
     def return_cursor_info(self):
@@ -156,7 +160,7 @@ class CustomiseDialog(qtw.QDialog):
         self.highlight_colour_label = qtw.QLabel("Highlight Colours")
         self.layout.addWidget(self.highlight_colour_label)
 
-        # customising colours
+        # customising colours for parts of speech and comments
         self.verb_dialog_button = qtw.QPushButton("Choose Verb Colour", self)
         self.layout.addWidget(self.verb_dialog_button)
         self.verb_dialog_button.clicked.connect(self.verb_colour_picker)
@@ -178,7 +182,7 @@ class CustomiseDialog(qtw.QDialog):
         self.comment_dialog_button.clicked.connect(self.comment_colour_picker)
 
         # toggle light/ dark mode
-        self.button_text = "Switch to Dark Mode" if self.mode == "light" else "Switch to Light Mode"
+        self.button_text = "Toggle Light/Dark Mode"
         self.toggle_button = qtw.QPushButton(self.button_text, self)
         self.toggle_button.setCheckable(True)
         self.toggle_button.clicked.connect(self.switch_mode)
@@ -187,7 +191,7 @@ class CustomiseDialog(qtw.QDialog):
         self.apply_label = qtw.QLabel("Apply Changes")
         self.layout.addWidget(self.apply_label)
 
-        #---- button called apply changes but this will return class with set properties to be then applied from the main app window
+        # button called apply changes but this will return class with set properties to be then applied from the main app window
         self.apply_button = qtw.QPushButton("Apply", self)
         self.layout.addWidget(self.apply_button)
         self.apply_button.clicked.connect(self.submitclose)
@@ -491,7 +495,7 @@ class MainWindow(qtw.QMainWindow):
         self.status.cursor_value.connect(self.update_status)
 
     def when_status_finished(self):
-        self.status.start()
+        self.start_status_thread()
 
     def update_status(self, info):
         self.line_column_label = f"Line {info[0]}, Column {info[1]}"

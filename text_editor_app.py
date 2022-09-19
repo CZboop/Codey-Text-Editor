@@ -311,7 +311,12 @@ class MainWindow(qtw.QMainWindow):
         self.bold_action.triggered.connect(self.bold_method)
         self.bold_action.setCheckable(True)
         self.bold_action.setChecked(False)
-        
+
+        self.italic_action = qtw.QAction(self)
+        self.italic_action.setText('&Italic')
+        self.italic_action.triggered.connect(self.italic_method)
+        self.italic_action.setCheckable(True)
+        self.italic_action.setChecked(False)       
 
         # adding actions to menu, in the order will appear in the menu
         file_menu.addAction(self.new_file_action)
@@ -324,6 +329,7 @@ class MainWindow(qtw.QMainWindow):
         format_menu.addAction(self.wrap_text_action)
 
         edit_menu.addAction(self.bold_action)
+        edit_menu.addAction(self.italic_action)
 
         #setting up bottom status bar
         self.statusbar = qtw.QStatusBar()
@@ -335,6 +341,9 @@ class MainWindow(qtw.QMainWindow):
 
         self.shortcut_bold = qtw.QShortcut(QKeySequence('Ctrl+b'), self)
         self.shortcut_bold.activated.connect(self.bold_method)
+
+        self.shortcut_italic = qtw.QShortcut(QKeySequence('Ctrl+i'), self)
+        self.shortcut_italic.activated.connect(self.italic_method)
 
         # adding an instance of syntaxhighlighter and text input(assigned in define_conditions)
         self.highlighter = SyntaxHighlighter()
@@ -376,6 +385,27 @@ class MainWindow(qtw.QMainWindow):
         else:
             self.text_input.setFontWeight(QFont.Bold)
             self.bold_action.setChecked(True)
+    
+    def italic_method(self):
+        # checking if already italic
+        if self.text_input.fontItalic() == True:
+            self.text_input.setFontItalic(False)
+            self.italic_action.setChecked(False)
+
+            # here checkin if some text was selected and if so...
+            cursor = self.text_input.textCursor()
+            
+            if cursor.selectionStart() != cursor.selectionEnd():
+                # will set current text to italic
+                cursor.clearSelection()
+                self.text_input.setTextCursor(cursor)
+                # but then reset font to normal for new text written after
+                self.text_input.setFontItalic(True)
+                self.italic_action.setChecked(True)
+                # currently above always sets to italic and not toggling depending on what current is (selection may be mixed)
+        else:
+            self.text_input.setFontItalic(True)
+            self.italic_action.setChecked(True)
 
     def exit_method(self):
         qtw.qApp.quit()

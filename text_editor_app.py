@@ -22,9 +22,10 @@ class SyntaxHighlighter(QSyntaxHighlighter):
                 # find out if matches condition
                 split_words = text_to_highlight.split()
                 for c, word in enumerate(split_words):
-                    if condition(word)==True:
+                    if condition(word.strip())==True:
                         # finding the start index of word that matches condition using regex
-                        iterator = re.finditer(f"\\b{word}\\b", text_to_highlight)
+                        # stripping word but matches including punctuation right after word (word boundary before)
+                        iterator = re.finditer(f"\\b{word}(?=[\W_]+|$)", text_to_highlight)
                         for match in iterator:
                             # then highlighting using method of parent class qsyntaxhighlighter, not defined here
                             self.setFormat(match.start(), len(word), format)
@@ -299,6 +300,12 @@ class MainWindow(qtw.QMainWindow):
         self.customise_action.setText('&Customise')
         self.customise_action.triggered.connect(self.customise_menu_method)
 
+        self.wrap_text_action = qtw.QAction(self)
+        self.wrap_text_action.setText('&Wrap Text')
+        self.wrap_text_action.triggered.connect(self.wrap_text_method)
+        self.wrap_text_action.setCheckable(True)
+        self.wrap_text_action.setChecked(True)
+
         # adding actions to menu, in the order will appear in the menu
         file_menu.addAction(self.new_file_action)
         file_menu.addAction(self.load_action)
@@ -307,6 +314,7 @@ class MainWindow(qtw.QMainWindow):
         file_menu.addAction(self.exit_action)
 
         format_menu.addAction(self.customise_action)
+        format_menu.addAction(self.wrap_text_action)
 
         #setting up bottom status bar
         self.statusbar = qtw.QStatusBar()
@@ -382,6 +390,14 @@ class MainWindow(qtw.QMainWindow):
                 return
         # make a new file by resetting everything including filename and text input contents
         self.reset_properties()
+
+    def wrap_text_method(self):
+        current_wrap = self.text_input.lineWrapMode()
+        # enum corresponding to default mode WidgetWidth
+        if current_wrap == 1:
+            self.text_input.setLineWrapMode(qtw.QTextEdit.NoWrap)
+        else:
+            self.text_input.setLineWrapMode(qtw.QTextEdit.WidgetWidth)
 
     def unsaved_changes(self):
         # if it's still untitled can assume unsaved changes as long as it's not empty
@@ -510,7 +526,7 @@ class MainWindow(qtw.QMainWindow):
         self.define_conditions()
 
         # creating the textedit box and connecting the highlighter to that box
-        self.text_input = QTextEdit(self, lineWrapMode=qtw.QTextEdit.FixedColumnWidth, lineWrapColumnOrWidth=100)
+        self.text_input = QTextEdit(self, lineWrapMode=qtw.QTextEdit.WidgetWidth)
         self.text_input.setFont(QFont(self.font_family, self.font_size))
         self.highlighter.setDocument(self.text_input.document())
 

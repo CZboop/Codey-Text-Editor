@@ -306,6 +306,13 @@ class MainWindow(qtw.QMainWindow):
         self.wrap_text_action.setCheckable(True)
         self.wrap_text_action.setChecked(True)
 
+        self.bold_action = qtw.QAction(self)
+        self.bold_action.setText('&Bold')
+        self.bold_action.triggered.connect(self.bold_method)
+        self.bold_action.setCheckable(True)
+        self.bold_action.setChecked(False)
+        
+
         # adding actions to menu, in the order will appear in the menu
         file_menu.addAction(self.new_file_action)
         file_menu.addAction(self.load_action)
@@ -316,6 +323,8 @@ class MainWindow(qtw.QMainWindow):
         format_menu.addAction(self.customise_action)
         format_menu.addAction(self.wrap_text_action)
 
+        edit_menu.addAction(self.bold_action)
+
         #setting up bottom status bar
         self.statusbar = qtw.QStatusBar()
         self.setStatusBar(self.statusbar)
@@ -323,6 +332,9 @@ class MainWindow(qtw.QMainWindow):
         # adding keyboard shortcuts
         self.shortcut_comment = qtw.QShortcut(QKeySequence('Ctrl+/'), self)
         self.shortcut_comment.activated.connect(self.comment_shortcut)
+
+        self.shortcut_bold = qtw.QShortcut(QKeySequence('Ctrl+b'), self)
+        self.shortcut_bold.activated.connect(self.bold_method)
 
         # adding an instance of syntaxhighlighter and text input(assigned in define_conditions)
         self.highlighter = SyntaxHighlighter()
@@ -343,6 +355,27 @@ class MainWindow(qtw.QMainWindow):
         cursor = self.text_input.textCursor()
         # print(cursor.columnNumber())
         return [cursor.blockNumber() + 1, cursor.columnNumber() + 1]
+
+    def bold_method(self):
+        # checking enum for bold else setting to normal
+        if self.text_input.fontWeight() == 75:
+            self.text_input.setFontWeight(QFont.Normal)
+            self.bold_action.setChecked(False)
+
+            # here checkin if some text was selected and if so...
+            cursor = self.text_input.textCursor()
+            
+            if cursor.selectionStart() != cursor.selectionEnd():
+                # will set current text to bold
+                cursor.clearSelection()
+                self.text_input.setTextCursor(cursor)
+                # but then reset font to normal for new text written after
+                self.text_input.setFontWeight(QFont.Normal)
+                self.bold_action.setChecked(False)
+                # currently above always sets to bold and not toggling depending on what current is (selection may be mixed)
+        else:
+            self.text_input.setFontWeight(QFont.Bold)
+            self.bold_action.setChecked(True)
 
     def exit_method(self):
         qtw.qApp.quit()

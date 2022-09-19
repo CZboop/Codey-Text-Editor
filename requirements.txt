@@ -1,0 +1,8 @@
+nltk==3.7
+pyinstaller==4.9
+pyinstaller-hooks-contrib==2022.2
+pypiwin32==223
+PyQt5==5.15.6
+PyQt5-Qt5==5.15.2
+PyQt5-sip==12.10.1
+regex==2022.1.18

@@ -11,29 +11,42 @@ import nltk
 import sys
 
 class MainWindow(qtw.QMainWindow):
-    # adding some extra properties the default constructor
+    # adding some extra properties to the default constructor
     def __init__(self):
         super().__init__()
-
+        # starting in dark mode, can toggle to light mode in customise menu
         self.mode = "dark"
-
+        # list of each part of speech for highlighting
         self.verbs = []
         self.nouns = []
         self.adjs = []
         self.adverbs = []
-
+        # initial highlight colours
         self.verb_colour = QColor("#b5ea78")
         self.noun_colour = QColor("#f1c96e")
         self.adj_colour = QColor("#b77fd7")
         self.adverb_colour = QColor("#c97477")
         self.comment_colour = QColor("#5F9EA0")
-
+        # some default values 
         self.filename = None
-
         self.font_family = "Consolas"
         self.font_size = 10
+        # calling some methods that will set properties of the window itself
+        # adding the top ribbon menu and connecting it to relevant actions
+        # setting up keyboard shortcuts
+        self.window_setup()
+        self.setup_menu()
+        self.setup_shortcuts()
+        # adding an instance of syntaxhighlighter and text input (assigned in define_conditions)
+        self.highlighter = SyntaxHighlighter()
+        self.setup_highlighter()
+        self.setCentralWidget(self.text_input)
+        # setting some styling and starting worker thread background processes
+        self.setStyleSheet("QTextEdit {background-color: rgb(30, 30, 30); color: white}")
+        self.start_worker_thread()
 
-        # some setup for the application window
+    def window_setup(self):
+        # some setup for the application window - size, title, icon
         width, height = 1500, 1000
         self.setWindowTitle("Untitled - Text Editor")
         self.setMinimumSize(width, height)
@@ -41,6 +54,7 @@ class MainWindow(qtw.QMainWindow):
         icon = self.style().standardIcon(pixmapi)
         self.setWindowIcon(icon)
 
+    def setup_menu(self):
         # setting up ribbon menu
         file_menu = self.menuBar().addMenu('&File')
         edit_menu = self.menuBar().addMenu('&Edit')
@@ -119,11 +133,12 @@ class MainWindow(qtw.QMainWindow):
         view_menu.addAction(self.plus_font_action)
         view_menu.addAction(self.minus_font_action)
 
-        #setting up bottom status bar
+        #setting up bottom status bar (no content)
         self.statusbar = qtw.QStatusBar()
         self.setStatusBar(self.statusbar)
 
-        # adding keyboard shortcuts
+    def setup_shortcuts(self):
+        # adding keyboard shortcuts - what key sequence will trigger, and what method that will call
         self.shortcut_comment = qtw.QShortcut(QKeySequence('Ctrl+/'), self)
         self.shortcut_comment.activated.connect(self.comment_shortcut)
 
@@ -139,25 +154,17 @@ class MainWindow(qtw.QMainWindow):
         self.shortcut_minus = qtw.QShortcut(QKeySequence('Ctrl+-'), self)
         self.shortcut_minus.activated.connect(self.minus_font_method)
 
-        # adding an instance of syntaxhighlighter and text input(assigned in define_conditions)
-        self.highlighter = SyntaxHighlighter()
-
-        self.setup_highlighter()
-        self.setCentralWidget(self.text_input)
-
-        # setting some styling and starting worker thread background processes
-        self.setStyleSheet("QTextEdit {background-color: rgb(30, 30, 30); color: white}")
-
-        self.start_worker_thread()
-
+    # shortcut for increasing font point size by two
     def plus_font_method(self):
         self.font_size += 2
         self.text_input.setFontPointSize(self.font_size)
 
+    # shortcut for decreasing font point size by two
     def minus_font_method(self):
         self.font_size -= 2
         self.text_input.setFontPointSize(self.font_size)
 
+    # method to bold or unbold font, either with shortcut of by clicking in menu
     def bold_method(self):
         # checking enum for bold else setting to normal
         if self.text_input.fontWeight() == 75:
@@ -179,6 +186,7 @@ class MainWindow(qtw.QMainWindow):
             self.text_input.setFontWeight(QFont.Bold)
             self.bold_action.setChecked(True)
     
+    # method to italicise or unitalicise font, either with shortcut of by clicking in menu
     def italic_method(self):
         # checking if already italic
         if self.text_input.fontItalic() == True:
@@ -200,11 +208,12 @@ class MainWindow(qtw.QMainWindow):
             self.text_input.setFontItalic(True)
             self.italic_action.setChecked(True)
 
+    # method to get the statistics that will be disaplayed in stats dialog
     def stats_method(self):
         split_text = self.text_input.toPlainText().split(" ")
         word_count = len([i for i in split_text if len(i) > 0])
         verb_count = 0
-        noun_count = -1
+        noun_count = 0
         adj_count = 0 
         adv_count = 0
         char_count = len(self.text_input.toPlainText())
@@ -228,9 +237,11 @@ class MainWindow(qtw.QMainWindow):
         stats_dialog = StatsDialog([word_count, char_count, verb_count, noun_count, adj_count, adv_count])
         stats_dialog.exec()
 
+    # closing the main window
     def exit_method(self):
         qtw.qApp.quit()
 
+    # method to save file, calls save as if file is not already saved, otherwise overwrites current filename
     def save_method(self):
         if not self.filename:
             self.save_as_method()
@@ -239,6 +250,7 @@ class MainWindow(qtw.QMainWindow):
             with open(self.filename + '.txt', 'w') as file:
                 file.write(text)
 
+    # save as method, opens file explorer starting at current directory and gets input on file name
     def save_as_method(self):
         filename, _ = qtw.QFileDialog.getSaveFileName(self, 'Save file', '', 'Text files (*.txt)')
         self.filename = filename
@@ -248,6 +260,7 @@ class MainWindow(qtw.QMainWindow):
             with open(self.filename, 'w') as file:
                 file.write(text)
 
+    # loading file using qt filedialog, reads text and inserts that text into the central text edit widget
     def load_file_method(self):
         # select file using QFileDialog
         filename, _ = qtw.QFileDialog.getOpenFileName(self, 'Open File', '', 'Text Files (*.txt)')
@@ -260,6 +273,7 @@ class MainWindow(qtw.QMainWindow):
         self.filename = filename
         self.setWindowTitle('{} - Text Editor'.format(self.filename))
 
+    # method to create a new file, checks for unsaved changes and warns user giving ability to save if unsaved changes
     def new_file_method(self):
         # checking if latest updates have been saved
         if self.unsaved_changes():
@@ -275,6 +289,7 @@ class MainWindow(qtw.QMainWindow):
         # make a new file by resetting everything including filename and text input contents
         self.reset_properties()
 
+    # method to toggle whether text wraps at end of line or not
     def wrap_text_method(self):
         current_wrap = self.text_input.lineWrapMode()
         # enum corresponding to default mode WidgetWidth
@@ -283,6 +298,7 @@ class MainWindow(qtw.QMainWindow):
         else:
             self.text_input.setLineWrapMode(qtw.QTextEdit.WidgetWidth)
 
+    # method used to check if there are unsaved changes
     def unsaved_changes(self):
         # if it's still untitled can assume unsaved changes as long as it's not empty
         current_text = self.text_input.toPlainText()
@@ -300,6 +316,7 @@ class MainWindow(qtw.QMainWindow):
             else:
                 return True
 
+    # resetting rpoperties for use when creating a new file
     def reset_properties(self):
         self.verbs = []
         self.nouns = []
@@ -311,6 +328,7 @@ class MainWindow(qtw.QMainWindow):
         self.setup_highlighter()
         self.setCentralWidget(self.text_input)
 
+    # method to execute the customise dialog and apply changes from it once it is closed/changes are applied from dialog
     def customise_menu_method(self):
         customise_menu = CustomiseDialog(self.mode)
         # customise_menu.exec()
@@ -319,6 +337,7 @@ class MainWindow(qtw.QMainWindow):
             self.update_highlight_colours(customise_menu.verb_colour, customise_menu.noun_colour, customise_menu.adverb_colour, customise_menu.adj_colour, customise_menu.comment_colour)
             self.update_mode(customise_menu.mode)
 
+    # method to toggle between light and dark mode
     def update_mode(self, mode):
         self.mode = mode
         if mode == "light":
@@ -326,6 +345,7 @@ class MainWindow(qtw.QMainWindow):
         else:
             self.setStyleSheet("QTextEdit {background-color: rgb(30, 30, 30); color: white}")
 
+    # method to update font (size and family) across the existing text edit
     def update_font(self, font_size, font_family):
         self.font_size = font_size
         self.font_family = font_family
@@ -338,6 +358,7 @@ class MainWindow(qtw.QMainWindow):
         new_font = QFont(self.font_family, self.font_size)
         self.text_input.setFont(new_font)
 
+    # updating colours that each part of speech is highlighted with
     def update_highlight_colours(self, verb_colour, noun_colour, adverb_colour, adj_colour, comment_colour):
         if verb_colour:
             self.verb_colour = verb_colour
@@ -353,6 +374,8 @@ class MainWindow(qtw.QMainWindow):
         self.highlighter.clear_mappings()
         self.define_conditions()
 
+    # method to comment out text with keyboard shortcut
+    # moves to start of line, adds comment char and moves back
     def comment_shortcut(self):
         # using cursor positions and inserting text, getting current cursor info
         current_cursor = self.text_input.textCursor()
@@ -363,12 +386,32 @@ class MainWindow(qtw.QMainWindow):
         current_cursor.movePosition(QTextCursor.Left, QTextCursor.MoveAnchor, current_y)
         # think have to reassign after each move of cursor?
         self.text_input.setTextCursor(current_cursor)
-        self.text_input.insertPlainText('# ')
-        # and reset to original position plus 2 for hashtag and space
-        current_cursor.setPosition(current_cursor_pos + 2)
-        self.text_input.setTextCursor(current_cursor)
-        # TODO: should remove starting hashtag if one already there? currently will just add another one...
+        char_cursor = self.text_input.textCursor()
+        char_cursor.movePosition(QTextCursor.Right, QTextCursor.KeepAnchor)
+        first_char = char_cursor.selectedText()
+        # if not already comment, comment
+        if first_char != "#":
+            self.text_input.insertPlainText('# ')
+            # and reset to original position plus 2 for hashtag and space
+            current_cursor.setPosition(current_cursor_pos + 2)
+            self.text_input.setTextCursor(current_cursor)
+        # else comment
+        else:
+            # char delta variable will track how far from cursor start position to move back (2 if # and space, 1 if just #)
+            char_delta = 2
+            # selecting first two chars of line
+            current_cursor.movePosition(QTextCursor.Right, QTextCursor.KeepAnchor)
+            current_cursor.movePosition(QTextCursor.Right, QTextCursor.KeepAnchor)
+            # deselecting second char if it's not a space
+            if current_cursor.selectedText()[-1] != " ":
+                current_cursor.movePosition(QTextCursor.Left, QTextCursor.KeepAnchor)
+                char_delta -= 1
+            # deleting selected text and resetting cursor connected to editor
+            current_cursor.removeSelectedText()
+            current_cursor.setPosition(current_cursor_pos - char_delta)
+            self.text_input.setTextCursor(current_cursor)
 
+    # worker thread for part of speech tagging in background
     def start_worker_thread(self):
         # starting worker thread and triggering method when it finishes
         self.worker = WorkerThread(self.text_input.toPlainText())
@@ -377,19 +420,19 @@ class MainWindow(qtw.QMainWindow):
         # catching the returned signal from worker thread and passing to another method
         self.worker.return_value.connect(self.handle_pos_returned)
 
+    # restarts thread so it runs continuously
     def when_worker_finished(self):
-        # what to do when the worker thread is finished, here just run it again
         self.start_worker_thread()
 
-# reassigning values of part of speech lists after worker thread has processed text and returned them
+    # reassigning values of part of speech lists after worker thread has processed text and returned them
     def handle_pos_returned(self, value):
         self.verbs = value.get("verbs")
         self.nouns = value.get("nouns")
         self.adjs = value.get("adjs")
         self.adverbs = value.get("adverbs")
 
-# defining formatting conditions for highlighting
-# mostly based on word being in part of speech tagged list with some regex based formatting
+    # defining formatting conditions for highlighting
+    # mostly based on word being in part of speech tagged list with some regex based formatting
     def setup_highlighter(self):
         # disconnecting highlighter from text input/document to refresh formatting conditions
         self.highlighter.setDocument(None)
@@ -401,6 +444,7 @@ class MainWindow(qtw.QMainWindow):
         self.text_input.setFont(QFont(self.font_family, self.font_size))
         self.highlighter.setDocument(self.text_input.document())
 
+    # defining conditions for when text will be highlighted
     def define_conditions(self):
         # formatting for some major parts of speech
         verb_format = QTextCharFormat()

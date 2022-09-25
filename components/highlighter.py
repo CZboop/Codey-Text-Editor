@@ -9,6 +9,7 @@ class SyntaxHighlighter(QSyntaxHighlighter):
         super().__init__(parent)
         self._mapping = {}
 
+    # method to add each mapping to the dict
     def set_mapping(self, condition, condition_format):
         self._mapping[condition] = condition_format
 
@@ -33,6 +34,7 @@ class SyntaxHighlighter(QSyntaxHighlighter):
                 for match in re.finditer(condition, text_to_highlight):
                     start, end = match.span()
                     self.setFormat(start, end - start, format)
-
+    
+    # clearing mappings by setting to an empty dict
     def clear_mappings(self):
         self._mapping = {}

@@ -4,6 +4,7 @@ from PyQt5.QtGui import QFont, QFontDatabase, QColor, QSyntaxHighlighter, QTextC
 import sys
 
 class CustomiseDialog(qtw.QDialog):
+    # adding extra attributes to store info that will be sent back to gui mainwindow
     def __init__(self, mode):
         super().__init__()
 
@@ -17,6 +18,11 @@ class CustomiseDialog(qtw.QDialog):
         self.adj_colour = None
         self.comment_colour = None
 
+        #calling methods to set up dialog window and populate with widgets
+        self.window_setup()
+        self.widget_setup()
+
+    def window_setup(self):
         self.setWindowTitle("Customisation Menu")
         width, height = 750, 400
         self.setMinimumSize(width, height)
@@ -25,7 +31,11 @@ class CustomiseDialog(qtw.QDialog):
         icon = self.style().standardIcon(pixmapi)
         self.setWindowIcon(icon)
 
+    # adding widgets for each thing that can be customised
+    def widget_setup(self):
         self.layout = qtw.QVBoxLayout()
+
+        # font size, label and spinbox to increase/decrease
         self.font_size_label = qtw.QLabel("Font Size")
         self.layout.addWidget(self.font_size_label)
 
@@ -43,6 +53,7 @@ class CustomiseDialog(qtw.QDialog):
             self.font_dropdown.addItem(font)
         self.layout.addWidget(self.font_dropdown)
 
+        # portion of dialog for setting highlight colours
         self.highlight_colour_label = qtw.QLabel("Highlight Colours")
         self.layout.addWidget(self.highlight_colour_label)
 
@@ -82,19 +93,24 @@ class CustomiseDialog(qtw.QDialog):
         self.layout.addWidget(self.apply_button)
         self.apply_button.clicked.connect(self.submitclose)
 
+        # layout created at start of method now populated and here set it as the layout for this dialog
         self.setLayout(self.layout)
 
+    # calling methods and closing once 'apply' button is clicked
     def submitclose(self):
         self.set_font_size()
         self.set_font_family()
         self.accept()
 
+    # getting font size from widget and setting class attribute based on it
     def set_font_size(self):
         self.font_size = self.font_size_box.value()
 
+    # getting font family from widget and setting class attribute based on it
     def set_font_family(self):
         self.font_family = str(self.font_dropdown.currentText())
 
+    # getting part of speech and comment colours from widget and setting class attribute based on it
     def verb_colour_picker(self):
         verb_colour_picker = qtw.QColorDialog().getColor()
         self.verb_colour = QColor(verb_colour_picker)
@@ -115,6 +131,7 @@ class CustomiseDialog(qtw.QDialog):
         comment_colour_picker = qtw.QColorDialog().getColor()
         self.comment_colour = QColor(comment_colour_picker)
 
+    # switching to opposite mode out of light and dark
     def switch_mode(self):
         self.button_text = "Switch to Dark Mode" if self.mode == "light" else "Switch to Light Mode"
         self.mode = "light" if self.mode == "dark" else "dark"

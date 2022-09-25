@@ -1,8 +1,8 @@
-from highlighter import SyntaxHighlighter
-from text_edit import QTextEdit
-from worker_thread import WorkerThread
-from customise_dialog import CustomiseDialog
-from stats_dialog import StatsDialog
+from components import SyntaxHighlighter
+from components import QTextEdit
+from components import WorkerThread
+from components import CustomiseDialog
+from components import StatsDialog
 
 import PyQt5.QtWidgets as qtw
 from PyQt5.QtCore import QSize, Qt, QThread, pyqtSignal, QEvent

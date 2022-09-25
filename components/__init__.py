@@ -1,0 +1,6 @@
+from components.highlighter import SyntaxHighlighter
+from components.text_edit import QTextEdit
+from components.worker_thread import WorkerThread
+from components.customise_dialog import CustomiseDialog
+from components.stats_dialog import StatsDialog
+from components.main_window import MainWindow

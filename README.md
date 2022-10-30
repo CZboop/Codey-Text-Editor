@@ -1,4 +1,4 @@
-# Text-Editor
+# Codey-Text-Editor
 Text editor intended for creative/human language writing but with features inspired by code editors. Made with Python, using PyQt, NLTK and Regex. 
 
 Uses multithreading to enable processes to run in the background without impacting user experience. Worker threads emit signals to pass information back to the main GUI application.
@@ -34,4 +34,8 @@ An excutable can also be created, once dependencies have been installed, which w
 To create an executable:  
 Clone this repository, navigate to the directory it is in and run the following command:   
 ```$ pyinstaller --onefile -w run.py```  
-After a few minutes the run.exe file will be created in a new /dist directory.
+After a few minutes the run.exe file will be created in a new /dist directory.  
+
+#### Example Screenshot
+An illustrative example of the app showing the highlighting of different key parts of speech and ability to add comments. 
+<img src="https://github.com/CZboop/Codey-Text-Editor/blob/main/example_screenshot.png" width="600" alt="dark mode desktop app ui with different coloured text"/>
